@@ -32,7 +32,6 @@ A Flask-based video server for Raspberry Pi Zero that allows you to upload, play
 
 2. Run the setup script:
    ```bash
-   chmod +x setup.sh
    sudo ./setup.sh
    ```
 
