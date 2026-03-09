@@ -9,6 +9,7 @@ A Flask-based video server for Raspberry Pi Zero that allows you to upload, play
 - **Web Interface**: Upload, play, loop, download, and delete videos
 - **Remote Control**: Access from any device on the same network
 - **Video Looping**: Play videos continuously in loop mode
+- **Keyboard Control**: Press `q` to stop video or `Ctrl+Q` to stop the service (headless, no SSH needed)
 - **Multiple Formats**: Supports MP4, MKV, AVI, and MOV files
 
 ## Network Configuration
@@ -71,6 +72,15 @@ Access the web interface from any device on the same network:
 - **Stop**: Stop current playback
 - **Download**: Download a video to your device
 - **Delete**: Remove a video from the server
+
+### Keyboard Controls (Headless)
+
+When a USB keyboard is attached to the Pi, you can control playback even when VLC owns the screen:
+
+- Press **q** — stop the current video (web server keeps running)
+- Press **Ctrl+Q** — stop the video and shut down the entire service
+
+This uses `evdev` to read keyboard input directly from `/dev/input/`, bypassing the console and framebuffer. If no keyboard is attached, the listener silently disables itself.
 
 ## File Structure
 

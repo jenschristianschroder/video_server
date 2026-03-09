@@ -3,6 +3,7 @@ import json
 import os
 import signal
 import subprocess
+import threading
 from flask import Flask, request, redirect, url_for, render_template_string, send_from_directory, abort
 
 # --- Config ---
@@ -62,6 +63,52 @@ def _shutdown_handler(signum, frame):
 signal.signal(signal.SIGTERM, _shutdown_handler)
 signal.signal(signal.SIGINT, _shutdown_handler)
 atexit.register(stop_player)
+
+def _keyboard_listener():
+    """
+    Background thread that reads keyboard events via evdev.
+    Works on headless Pi even when VLC owns the framebuffer.
+    Press 'q' to stop the video player.
+    Press 'Ctrl+Q' to stop the entire service.
+    """
+    try:
+        from evdev import InputDevice, ecodes
+        import glob
+    except ImportError:
+        print("evdev not available — keyboard listener disabled")
+        return
+
+    # Find the first keyboard device
+    device = None
+    for path in sorted(glob.glob("/dev/input/event*")):
+        try:
+            dev = InputDevice(path)
+            caps = dev.capabilities(verbose=False)
+            if ecodes.EV_KEY in caps and ecodes.KEY_Q in caps[ecodes.EV_KEY]:
+                device = dev
+                break
+        except (PermissionError, OSError):
+            continue
+
+    if not device:
+        print("No keyboard found — keyboard listener disabled")
+        return
+
+    print(f"Keyboard listener active on {device.name} — press 'q' to stop video, 'Ctrl+Q' to stop service")
+    ctrl_held = False
+    for event in device.read_loop():
+        if event.type != ecodes.EV_KEY:
+            continue
+        if event.code in (ecodes.KEY_LEFTCTRL, ecodes.KEY_RIGHTCTRL):
+            ctrl_held = event.value in (1, 2)  # 1=press, 2=hold
+        elif event.code == ecodes.KEY_Q and event.value == 1:  # key down
+            if ctrl_held:
+                print("Ctrl+Q pressed — stopping service")
+                stop_player()
+                os._exit(0)
+            else:
+                print("Q pressed — stopping video playback")
+                stop_player()
 
 def play_file(name: str, loop: bool = False) -> bool:
     """
@@ -230,6 +277,10 @@ if __name__ == "__main__":
             print("No videos found to autoplay")
     else:
         print("Autoplay disabled (AUTOPLAY_ON_START=false)")
+
+    # Start keyboard listener for headless stop control
+    kb_thread = threading.Thread(target=_keyboard_listener, daemon=True)
+    kb_thread.start()
 
     # Bind to all interfaces so clients on your Wi-Fi/AP can reach it
     app.run(host="0.0.0.0", port=8000, debug=False)
