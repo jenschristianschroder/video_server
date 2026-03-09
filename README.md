@@ -4,7 +4,8 @@ A Flask-based video server for Raspberry Pi Zero that allows you to upload, play
 
 ## Features
 
-- **Autoplay on Boot**: Automatically plays the first video in loop when the app starts
+- **Autoplay on Boot**: Automatically plays the default video in loop when the app starts
+- **Default Video**: Set which video to autoplay via the web interface
 - **Web Interface**: Upload, play, loop, download, and delete videos
 - **Remote Control**: Access from any device on the same network
 - **Video Looping**: Play videos continuously in loop mode
@@ -52,9 +53,9 @@ python app.py
 ```
 
 The server will:
-1. Automatically play the first video in the `videos/` folder (in loop mode)
+1. Automatically play the default video in loop (configured in `settings.json`)
 2. Start the web server on port 8000
-3. Be accessible at `http://10.57.175.38:8000`
+3. Be accessible at `http://<pi-ip-address>:8000`
 
 ### Autoplay on Boot
 
@@ -62,10 +63,11 @@ The setup script installs a systemd service (`video-server`) that starts the app
 
 ### Web Interface
 
-Access the web interface from any device on the MSFTDEVICES network:
+Access the web interface from any device on the same network:
 - **Upload**: Select a video file and click Upload
 - **Play**: Play a video once
 - **Loop**: Play a video continuously
+- **Set Default**: Choose which video to autoplay on boot
 - **Stop**: Stop current playback
 - **Download**: Download a video to your device
 - **Delete**: Remove a video from the server
