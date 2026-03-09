@@ -170,13 +170,16 @@ def download(name):
 
 # --- Main ---
 if __name__ == "__main__":
-    # Autoplay the first video in loop when the app starts
-    videos = list_videos()
-    if videos:
-        print(f"Auto-playing first video: {videos[0]}")
-        play_file(videos[0], loop=True)
+    # Autoplay the first video in loop if enabled in .env
+    if os.environ.get("AUTOPLAY_ON_START", "true").lower() == "true":
+        videos = list_videos()
+        if videos:
+            print(f"Auto-playing first video: {videos[0]}")
+            play_file(videos[0], loop=True)
+        else:
+            print("No videos found to autoplay")
     else:
-        print("No videos found to autoplay")
-    
+        print("Autoplay disabled (AUTOPLAY_ON_START=false)")
+
     # Bind to all interfaces so clients on your Wi-Fi/AP can reach it
     app.run(host="0.0.0.0", port=8000, debug=False)

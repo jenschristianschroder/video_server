@@ -12,10 +12,8 @@ A Flask-based video server for Raspberry Pi Zero that allows you to upload, play
 
 ## Network Configuration
 
-- **IP Address**: `10.57.175.38`
-- **WiFi Network**: `MSFTDEVICES`
 - **Port**: `8000`
-- **Access URL**: `http://10.57.175.38:8000`
+- **Access URL**: `http://<pi-ip-address>:8000`
 
 ## Credentials
 
