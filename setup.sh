@@ -23,6 +23,9 @@ echo "==> Creating videos directory..."
 mkdir -p "${APP_DIR}/videos"
 chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}/videos"
 
+echo "==> Adding ${APP_USER} to input group (for keyboard control)..."
+usermod -aG input "${APP_USER}"
+
 # ── Settings ─────────────────────────────────────────────────────────
 ENV_FILE="${APP_DIR}/.env"
 
