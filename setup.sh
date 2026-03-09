@@ -23,6 +23,22 @@ echo "==> Creating videos directory..."
 mkdir -p "${APP_DIR}/videos"
 chown -R "${APP_USER}:${APP_USER}" "${APP_DIR}/videos"
 
+# ── Settings ─────────────────────────────────────────────────────────
+ENV_FILE="${APP_DIR}/.env"
+
+read -rp "==> Autoplay first video on startup? [Y/n] " autoplay_answer
+autoplay_answer="${autoplay_answer:-Y}"
+if [[ "${autoplay_answer}" =~ ^[Yy]$ ]]; then
+    AUTOPLAY="true"
+else
+    AUTOPLAY="false"
+fi
+
+echo "AUTOPLAY_ON_START=${AUTOPLAY}" > "${ENV_FILE}"
+chown "${APP_USER}:${APP_USER}" "${ENV_FILE}"
+echo "    Wrote ${ENV_FILE}"
+
+# ── Systemd service ──────────────────────────────────────────────────
 echo "==> Installing systemd service (${SERVICE_NAME})..."
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<EOF
 [Unit]
@@ -37,6 +53,7 @@ ExecStart=${VENV_DIR}/bin/python ${APP_DIR}/app.py
 Restart=on-failure
 RestartSec=5
 Environment=DISPLAY=:0
+EnvironmentFile=${ENV_FILE}
 
 [Install]
 WantedBy=multi-user.target
