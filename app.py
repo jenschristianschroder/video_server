@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 from flask import Flask, request, redirect, url_for, render_template_string, send_from_directory, abort
@@ -5,6 +6,7 @@ from flask import Flask, request, redirect, url_for, render_template_string, sen
 # --- Config ---
 BASE = os.path.dirname(__file__)
 UPLOAD_FOLDER = os.path.join(BASE, "videos")
+SETTINGS_FILE = os.path.join(BASE, "settings.json")
 ALLOWED = {"mp4", "mkv", "avi", "mov"}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -73,6 +75,24 @@ def list_videos():
         if os.path.isfile(os.path.join(UPLOAD_FOLDER, f))
     )
 
+def load_settings():
+    if os.path.isfile(SETTINGS_FILE):
+        with open(SETTINGS_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_settings(settings):
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(settings, f, indent=2)
+
+def get_default_video():
+    return load_settings().get("default_video")
+
+def set_default_video(name):
+    settings = load_settings()
+    settings["default_video"] = name
+    save_settings(settings)
+
 # --- HTML ---
 HTML = """<!doctype html>
 <html>
@@ -87,6 +107,8 @@ HTML = """<!doctype html>
     .item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ddd;padding:8px 0}
     .name{word-break:break-all}
     button{padding:6px 10px}
+    .default-btn{background:#f0ad4e;border:1px solid #eea236;color:#fff}
+    .default-btn.active{background:#5cb85c;border-color:#4cae4c}
     .upload{border:1px solid #ddd;padding:12px;margin:12px 0}
     .hint{color:#555;font-size:.9em}
   </style>
@@ -111,10 +133,13 @@ HTML = """<!doctype html>
   {% if not videos %}<p>No videos yet.</p>{% endif %}
   {% for v in videos %}
     <div class="item">
-      <span class="name">{{ v }}</span>
+      <span class="name">{{ v }}{% if v == default_video %} &#9733;{% endif %}</span>
       <div class="row">
         <form method="post" action="{{ url_for('play', name=v) }}"><button type="submit">Play</button></form>
         <form method="post" action="{{ url_for('play_loop', name=v) }}"><button type="submit">Loop</button></form>
+        <form method="post" action="{{ url_for('set_default', name=v) }}">
+          <button type="submit" class="default-btn{{ ' active' if v == default_video else '' }}">{% if v == default_video %}Default &#9733;{% else %}Set Default{% endif %}</button>
+        </form>
         <a href="{{ url_for('download', name=v) }}"><button type="button">Download</button></a>
         <form method="post" action="{{ url_for('delete', name=v) }}" onsubmit="return confirm('Delete {{ v }}?')">
           <button type="submit">Delete</button>
@@ -128,7 +153,7 @@ HTML = """<!doctype html>
 # --- Routes ---
 @app.route("/", methods=["GET"])
 def index():
-    return render_template_string(HTML, videos=list_videos())
+    return render_template_string(HTML, videos=list_videos(), default_video=get_default_video())
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -154,10 +179,19 @@ def stop():
     stop_player()
     return redirect(url_for("index"))
 
+@app.route("/set_default/<name>", methods=["POST"])
+def set_default(name):
+    path = os.path.join(UPLOAD_FOLDER, name)
+    if os.path.isfile(path):
+        set_default_video(name)
+    return redirect(url_for("index"))
+
 @app.route("/delete/<name>", methods=["POST"])
 def delete(name):
     path = os.path.join(UPLOAD_FOLDER, name)
     if os.path.isfile(path):
+        if get_default_video() == name:
+            set_default_video(None)
         os.remove(path)
     return redirect(url_for("index"))
 
@@ -170,12 +204,14 @@ def download(name):
 
 # --- Main ---
 if __name__ == "__main__":
-    # Autoplay the first video in loop if enabled in .env
+    # Autoplay the default video (or first available) in loop if enabled
     if os.environ.get("AUTOPLAY_ON_START", "true").lower() == "true":
+        default = get_default_video()
         videos = list_videos()
-        if videos:
-            print(f"Auto-playing first video: {videos[0]}")
-            play_file(videos[0], loop=True)
+        target = default if default and default in videos else (videos[0] if videos else None)
+        if target:
+            print(f"Auto-playing video: {target}")
+            play_file(target, loop=True)
         else:
             print("No videos found to autoplay")
     else:
