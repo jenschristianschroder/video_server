@@ -86,7 +86,7 @@ def save_settings(settings):
         json.dump(settings, f, indent=2)
 
 def get_default_video():
-    return load_settings().get("default_video")
+    return load_settings().get("default_video", "test_video.mp4")
 
 def set_default_video(name):
     settings = load_settings()
