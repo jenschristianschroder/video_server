@@ -15,11 +15,6 @@ A Flask-based video server for Raspberry Pi Zero that allows you to upload, play
 - **Port**: `8000`
 - **Access URL**: `http://<pi-ip-address>:8000`
 
-## Credentials
-
-- **Username**: `hubcph`
-- **Password**: hub password
-
 ## Installation
 
 1. Clone the repository on your Raspberry Pi Zero 2 W:
