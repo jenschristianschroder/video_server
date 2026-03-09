@@ -63,6 +63,49 @@ systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}.service"
 systemctl start "${SERVICE_NAME}.service"
 
+# ── Disable unnecessary services ─────────────────────────────────────
+echo ""
+read -rp "==> Disable unnecessary services to reduce overhead? [Y/n] " disable_answer
+disable_answer="${disable_answer:-Y}"
+if [[ "${disable_answer}" =~ ^[Yy]$ ]]; then
+    # Services safe to disable on a headless video kiosk with WiFi
+    DISABLE_SERVICES=(
+        cloud-init.service
+        cloud-init-local.service
+        cloud-config.service
+        cloud-final.service
+        snapd.service
+        snapd.socket
+        snapd.seeded.service
+        ModemManager.service
+        bluetooth.service
+        bluetooth.target
+        hciuart.service
+        triggerhappy.service
+        triggerhappy.socket
+        avahi-daemon.service
+        avahi-daemon.socket
+        cups.service
+        cups-browsed.service
+        apt-daily.service
+        apt-daily.timer
+        apt-daily-upgrade.service
+        apt-daily-upgrade.timer
+        man-db.timer
+    )
+
+    for svc in "${DISABLE_SERVICES[@]}"; do
+        if systemctl list-unit-files "${svc}" &>/dev/null; then
+            systemctl disable --now "${svc}" 2>/dev/null && \
+                echo "    Disabled ${svc}" || \
+                echo "    Skipped ${svc} (not found)"
+        fi
+    done
+    echo "    Done — unnecessary services disabled."
+else
+    echo "    Skipping — services left as-is."
+fi
+
 echo ""
 echo "==> Setup complete!"
 echo "    The video server is running and will start automatically on reboot."
