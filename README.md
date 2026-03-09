@@ -24,19 +24,30 @@ A Flask-based video server for Raspberry Pi Zero that allows you to upload, play
 
 ## Installation
 
-1. Clone or copy this repository to your Raspberry Pi Zero
-2. Install required dependencies:
+1. Clone the repository on your Raspberry Pi Zero 2 W:
    ```bash
-   pip install flask
+   git clone https://github.com/jenschristianschroder/video_server.git
+   cd video_server
    ```
 
-3. Ensure video player is installed:
+2. Run the setup script:
    ```bash
-   sudo apt-get install omxplayer
+   chmod +x setup.sh
+   sudo ./setup.sh
    ```
-   Or alternatively:
+
+   This will:
+   - Install system packages (Python 3, VLC)
+   - Create a Python virtual environment and install dependencies
+   - Create a `videos/` directory
+   - Install and enable a systemd service so the app starts automatically on boot
+
+3. Manage the service:
    ```bash
-   sudo apt-get install vlc
+   sudo systemctl status video-server
+   sudo systemctl restart video-server
+   sudo systemctl stop video-server
+   journalctl -u video-server -f   # view logs
    ```
 
 ## Usage
@@ -55,12 +66,7 @@ The server will:
 
 ### Autoplay on Boot
 
-To run the video server automatically when the Raspberry Pi boots, add to `/etc/rc.local` (before `exit 0`):
-```bash
-cd /path/to/video_server && python app.py &
-```
-
-Or create a systemd service for better control.
+The setup script installs a systemd service (`video-server`) that starts the app automatically on boot. No manual configuration is needed.
 
 ### Web Interface
 
@@ -78,6 +84,8 @@ Access the web interface from any device on the MSFTDEVICES network:
 video_server/
 ├── app.py              # Main Flask application
 ├── autoplay_video.py   # Standalone autoplay script
+├── setup.sh            # One-time install & systemd setup
+├── requirements.txt    # Python dependencies
 ├── videos/             # Video storage folder
 └── README.md           # This file
 ```
