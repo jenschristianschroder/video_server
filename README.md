@@ -108,22 +108,85 @@ Default: 8000. Modify in `app.py`:
 app.run(host="0.0.0.0", port=8000, debug=False)
 ```
 
+## Maintenance
+
+The video server runs as a systemd service. **Always stop the service before performing maintenance** to ensure the video player subprocess is cleanly terminated.
+
+### Stopping the service for maintenance
+
+```bash
+sudo systemctl stop video-server
+```
+
+This cleanly shuts down both the Flask web server and any running video player process. Your terminal will be free for normal use.
+
+### Performing system updates
+
+```bash
+sudo systemctl stop video-server
+sudo apt-get update && sudo apt-get upgrade -y
+sudo systemctl start video-server
+```
+
+### Changing settings
+
+Edit the `.env` file to change autoplay behaviour:
+
+```bash
+sudo systemctl stop video-server
+nano .env                          # e.g. AUTOPLAY_ON_START=false
+sudo systemctl start video-server
+```
+
+The default video can also be changed from the web interface without stopping the service.
+
+### Restarting the service
+
+```bash
+sudo systemctl restart video-server
+```
+
+### Viewing logs
+
+```bash
+journalctl -u video-server -f
+```
+
+### Starting after maintenance
+
+```bash
+sudo systemctl start video-server
+```
+
+The service will also start automatically on the next reboot.
+
 ## Troubleshooting
 
 ### No video plays on startup
 - Ensure videos exist in the `videos/` folder
-- Check that omxplayer or VLC is installed
-- Check terminal output for error messages
+- Check that VLC is installed: `which cvlc`
+- Check logs: `journalctl -u video-server -f`
 
 ### Cannot access web interface
-- Verify Raspberry Pi is connected to MSFTDEVICES WiFi
-- Confirm IP address is `10.57.175.38` with `hostname -I`
-- Check firewall settings if enabled
+- Confirm the Pi's IP address with `hostname -I`
+- Ensure the Pi is connected to WiFi
+- Check that the service is running: `sudo systemctl status video-server`
 
 ### Video playback issues
-- Ensure video format is supported
+- Ensure video format is supported (MP4, MKV, AVI, MOV)
 - Check that HDMI output is properly connected
-- For omxplayer, audio defaults to HDMI output
+
+### Terminal appears polluted or unresponsive
+This can happen if the service was killed without properly terminating the video player subprocess. To recover:
+
+```bash
+# Kill any orphaned player processes
+sudo pkill -9 cvlc 2>/dev/null; sudo pkill -9 vlc 2>/dev/null
+sudo pkill -9 omxplayer 2>/dev/null
+
+# Restart the service cleanly
+sudo systemctl restart video-server
+```
 
 ## Notes
 

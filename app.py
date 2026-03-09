@@ -1,5 +1,7 @@
+import atexit
 import json
 import os
+import signal
 import subprocess
 from flask import Flask, request, redirect, url_for, render_template_string, send_from_directory, abort
 
@@ -45,9 +47,21 @@ def stop_player():
     if PLAYER and PLAYER.poll() is None:
         try:
             PLAYER.terminate()
+            PLAYER.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            PLAYER.kill()
+            PLAYER.wait()
         except Exception:
             pass
     PLAYER = None
+
+def _shutdown_handler(signum, frame):
+    stop_player()
+    raise SystemExit(0)
+
+signal.signal(signal.SIGTERM, _shutdown_handler)
+signal.signal(signal.SIGINT, _shutdown_handler)
+atexit.register(stop_player)
 
 def play_file(name: str, loop: bool = False) -> bool:
     """
