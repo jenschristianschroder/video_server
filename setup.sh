@@ -6,7 +6,11 @@ set -euo pipefail
 
 # ── Configuration ────────────────────────────────────────────────────
 APP_DIR="$(cd "$(dirname "$0")" && pwd)"
-APP_USER="${SUDO_USER:-pi}"
+APP_USER="${SUDO_USER:-$(logname 2>/dev/null || echo pi)}"
+if ! id -u "${APP_USER}" &>/dev/null; then
+    echo "ERROR: User '${APP_USER}' does not exist." >&2
+    exit 1
+fi
 SERVICE_NAME="video-server"
 VENV_DIR="${APP_DIR}/venv"
 
@@ -46,7 +50,8 @@ echo "==> Installing systemd service (${SERVICE_NAME})..."
 cat > "/etc/systemd/system/${SERVICE_NAME}.service" <<EOF
 [Unit]
 Description=Pi Video Server
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
@@ -71,12 +76,16 @@ echo ""
 read -rp "==> Disable unnecessary services to reduce overhead? [Y/n] " disable_answer
 disable_answer="${disable_answer:-Y}"
 if [[ "${disable_answer}" =~ ^[Yy]$ ]]; then
+    # Properly disable cloud-init via its supported mechanism
+    touch /etc/cloud/cloud-init.disabled
+    CMDLINE_FILE="/boot/firmware/cmdline.txt"
+    if [ -f "${CMDLINE_FILE}" ] && ! grep -q 'cloud-init=disabled' "${CMDLINE_FILE}"; then
+        sed -i 's/$/ cloud-init=disabled/' "${CMDLINE_FILE}"
+    fi
+    echo "    Disabled cloud-init (marker file + kernel cmdline)"
+
     # Services safe to disable on a headless video kiosk with WiFi
     DISABLE_SERVICES=(
-        cloud-init.service
-        cloud-init-local.service
-        cloud-config.service
-        cloud-final.service
         snapd.service
         snapd.socket
         snapd.seeded.service
@@ -98,10 +107,12 @@ if [[ "${disable_answer}" =~ ^[Yy]$ ]]; then
     )
 
     for svc in "${DISABLE_SERVICES[@]}"; do
-        if systemctl list-unit-files "${svc}" &>/dev/null; then
+        if systemctl list-unit-files | grep -q "^${svc}[[:space:]]"; then
             systemctl disable --now "${svc}" 2>/dev/null && \
                 echo "    Disabled ${svc}" || \
-                echo "    Skipped ${svc} (not found)"
+                echo "    Skipped ${svc} (could not disable)"
+        else
+            echo "    Skipped ${svc} (not installed)"
         fi
     done
     echo "    Done — unnecessary services disabled."
